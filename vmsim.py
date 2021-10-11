@@ -105,7 +105,7 @@ class Page_table:
             if page.valid and page.time<oldestTime:
                 oldestFrame = page.frame
                 oldestTime = page.time
-        print("oldest frame is", oldestFrame)
+        #print("oldest frame is", oldestFrame)
         return oldestFrame
 
     def getLoadedPages(self):
@@ -181,11 +181,10 @@ elif algorithm == "OPTIMAL":
                 k+=1
             else:
                 loadedPages = page_table.getLoadedPages()
-                #print(loadedPages)
                 lam = lambda a : calcRecency(a, addresses)
-                loadedPages.sort(key=lam, reverse=False)
-                #print([[loadedPage, calcRecency(loadedPage, addresses)] for loadedPage in loadedPages])
-                page_table.loadReplace(page, loadedPages[0])
+                loadedPages.sort(key=lam, reverse=True)
+                print([[l,lam(l)] for l in loadedPages])
+                page_table.loadReplace(page, page_table.elements[loadedPages[0]].frame)
 
 
 
