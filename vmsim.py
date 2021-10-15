@@ -69,7 +69,8 @@ class Page_table:
     def __init__(self, number_of_pages):
         for i in range(number_of_pages):
             self.elements.append(Page_element())
-
+    
+    # Is page loaded? + count page hit/fault
     def testValid(self, page, time=-1):
         valid = self.elements[page].valid
         self.elements[page].time = time
@@ -80,6 +81,7 @@ class Page_table:
         return valid
     
     # load page to physical memory, replacing specific slot in physical memory
+    # (frame = physical, page = virtual)
     def loadReplace(self, newPage, oldFrame, time = -1):
         unloadedPage = self.invalidateFrame(oldFrame)
         element = self.elements[newPage]
@@ -89,6 +91,7 @@ class Page_table:
         print("Page", newPage, "is replacing page", unloadedPage, ", Currently loaded:", self.getLoadedPages())
 
 
+    # invalidate frame (physical) and return what page index got removed
     def invalidateFrame(self,frame):
         for i in range(len(self.elements)):
             page = self.elements[i] 
@@ -96,7 +99,7 @@ class Page_table:
                 if page.valid:
                     page.valid = False
                     return i
-
+    
     def getOldestFrame(self):
         oldestFrame = None
         oldestTime = 1000000000000000
@@ -105,9 +108,9 @@ class Page_table:
             if page.valid and page.time<oldestTime:
                 oldestFrame = page.frame
                 oldestTime = page.time
-        #print("oldest frame is", oldestFrame)
         return oldestFrame
-
+    
+    # get page indexes for all loaded pages (in physical memory)
     def getLoadedPages(self):
         return [i for i,page in enumerate(self.elements) if page.valid]
 
@@ -116,20 +119,22 @@ page_table = Page_table(number_of_pages)
 
          
 
-class Frame:
-    data = ""
-physical_memory = []
+#class Frame:
+#    data = ""
+#physical_memory = []
 
-for i in range(num_frames):
-    physical_memory.append(Frame())
+#for i in range(num_frames):
+#    physical_memory.append(Frame())
 
 addresses = []
 with open(filename) as f:
     for line in f.readlines():
         addresses.append(int(line,16))
 
+# number to hex string
 def toHex(number, digits=6):
     return "{0:#0{1}x}".format(number,digits)
+
 
 for address in addresses:
     print(toHex(address))
@@ -139,7 +144,8 @@ for address in addresses:
 
 print("-------------------")
 
-def calcRecency(page, addresses):
+# calc recency score, starting at i
+def calcRecency(page, addresses, i):
     recency = 100000000
     for j in range(i,len(addresses)):
         addr = addresses[j]
@@ -164,10 +170,12 @@ elif algorithm == "LRU":
         page = addressToPage(address)
         if not page_table.testValid(page, time):
             if framesUsed < num_frames:
+                # use all avaliable frames
                 framesUsed+=1
                 page_table.loadReplace(page, i, time)
                 i+=1
             else:
+                # replace oldest
                 page_table.loadReplace(page, page_table.getOldestFrame(), time)
 elif algorithm == "OPTIMAL":
     framesUsed = 0
@@ -176,23 +184,18 @@ elif algorithm == "OPTIMAL":
         page = addressToPage(address)
         if not page_table.testValid(page):
             if framesUsed < num_frames:
+                # use all avaliable frames
                 framesUsed+=1
                 page_table.loadReplace(page, k)
                 k+=1
             else:
                 loadedPages = page_table.getLoadedPages()
-                lam = lambda a : calcRecency(a, addresses)
-                loadedPages.sort(key=lam, reverse=True)
+                lam = lambda a : calcRecency(a, addresses, i)
+                loadedPages.sort(key=lam, reverse=True) # worst score at index 0 
                 print([[l,lam(l)] for l in loadedPages])
                 page_table.loadReplace(page, page_table.elements[loadedPages[0]].frame)
 
-
-
-                
-
-
-
 print("-------------------")
-print(page_hits, "page hits,", page_faults, "page faults")
+print(page_hits, "page hits,", color.RED, color.BOLD, page_faults, color.END, "page faults")
 
 
